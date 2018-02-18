@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <title>404CorporateFinanceHw3.html</title>
+  </head>
+
+  <meta name="KEYWORDS" content="WRDS" />
+  <meta name="AUTHOR" content="Ming-Hao Yu" />
+
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="hw.css" />
+  
+
+  <body>
+
+    <h1> Homework 3, by Ming-Hao Yu, Feb 2, 2018 </h1>
+
+	<h2> Task Discription </h2>
+    <p> Create an annual data set of compounded rates of return for each stock: perm, ticker, cusip, year, marketcap, rate of return. do not drop stocks in their year of disappearance! </p>
+	
+    <h2> Executive Summary </h2>
+	<p> 1. Analyze CRSP daily stock data from <b>2010</b> to <b>2017</b>. Assign missing data (NA, null, etc.) 0 for convenience in calculation.</p>
+	<p> 2. Get endpoints of different stocks and end of a year by comparing $PERMNO and $YEAR.</p>
+	<p> 3. Use endpoints for period.apply to calculate annual compounded rate of return.</p>
+	<p> 4. Subset data to get the final result. </p>
+	<p> 5. Construct a function: searchStock(search=""), for the user to investigate data of a specific stock.</p>
+	<p> 6. Construct a function: demoResult(), for the user to see the summary of the whole result.</p>
+    
+	<h2> Data Source & Variables</h2>
+	<p> Source: CRSP-Daily Stock </p>
+	<p> 1. PERMNO: Unique permanent security identification number assigned by CRSP to each security</p>
+	<p> 2. Ticker: Ticker </p>
+	<p> 3. SHROUT: Number of outstanding shares </p>
+	<p> 4. CUSIP:  Committee on Uniform Securities Identification Procedures </p>
+	<p> 5. RET: Holding Period Return </p>
+    <p> 6. PRICE: Stock price </p>
+	
+    <h2> Tables and Figures </h2>
+	<p> Summary </p>
+	<img src="https://drive.google.com/uc?export=view&id=1vjyI8tw20PMr5rCNjuqPuCNXO8MwiiR2", width=40%>
+	<p> demoResult() </p>
+	<img src="https://drive.google.com/uc?export=view&id=1P82JkPlgnn1X0xNNvnoDKdT5yJwZx9lC", width=40%>
+	
+	<h3> Example </h3>
+	<p> MSFT </p>
+	<img src="https://drive.google.com/uc?export=view&id=1B1yKuHgkc8nlDEJPXTgF5IwsRfE1Ajj1", width=40%></br>
+	<img src="https://drive.google.com/uc?export=view&id=1Zy6lJZjafEqcKS-40Cbd-Zz0zy6XOAU-", width=40%> 
+	
+	<p> AAPL </p>
+	<img src="https://drive.google.com/uc?export=view&id=1TOOAdYwajNGOFi7-sQNQo7cOpuQw4A3L", width=40%></br>
+	<img src="https://drive.google.com/uc?export=view&id=1MPFFQ2hQUcWG5P4p_ljUykIQvywL4xdG", width=40%> 
+	
+	<p> TSLA </p>
+	<img src="https://drive.google.com/uc?export=view&id=1OO31EdnZXpXZCYKxdfylNEYEYcQjY0XR", width=40%></br>
+	<img src="https://drive.google.com/uc?export=view&id=1ZQEOr4q46NvLNaXjYSvnoNoSjd8NSwwL", width=40%> 
+	
+	<p> result </p>
+	<ul>
+      <li> <a href="https://drive.google.com/file/d/1Vh7xU8VRO-oFftd7FASoHWQvcsKh64pu/view?usp=sharing">AnnualReturn</a> </li>
+    </ul>
+    
+	<h2> Data Analysis</h2>	
+	<p> When compared to S&P500 (vwretd) annual return, we can see that the average return of all stocks has a slightly low mean: <b>0.10610</b> while S&P500 is <b>0.121897</b> from year 2010 to year 2017. For the maximum and minimum return, average return of all stocks has a max value: <b>19.48066</b> of a specific stock in a certain year, and a min value: <b>-0.999999</b>, which means that the stock went default within one year (loses 99.99% of its value). In the same time, S&P500 has max value: <b>0.304720</b> and min value: <b>-0.137754</b></p>
+	
+	<p> We are interested in a stock that can get a <b>19.48066</b> annual rate of return. Thus we search for that specific stock by using searchStock("MPET") function. After searching the data of MPET (an energy company), we can find that during year 2016, that company had about 10 days earing daily return abvoe 0.2, which is incredibly high daily return rate.</p>
+	<p> MPET </p>
+	<img src="https://drive.google.com/uc?export=view&id=1DaNfTnG0vEWJYo9n481hUl4TQUF9OXN5", width=40%></br>
+	<img src="https://drive.google.com/uc?export=view&id=1ImlM2Y8tAyWJHyj6thxJxS5WPVq4Qc33", width=40%></br>
+	<img src="https://drive.google.com/uc?export=view&id=1dboxvoKnChowPP7c5FY22AwC2Jkd4Ti5", width=50%>
+	
+    <h2> Computer Code </h2>
+    <pre>
+    #title : 404-Coporate Finance Hw3
+    #author: Ming-Hao Yu
+    #date  : 2018.02.01
+    
+    library(data.table)
+    library(xts)
+    library(zoo)
+    
+    setwd("C:/Users/Ming-Hao/Desktop/MFE/404-Corporate Finance/HW3")
+    
+    if(!exists("crsp")) {
+        crsp <- fread(file="CRSP.csv", header=TRUE, sep=",", stringsAsFactors = FALSE)
+        crsp$MKTCAP <- crsp$PRC * crsp$SHROUT
+        crsp$YEAR <- as.numeric(substring(crsp$date, 1,4))
+    } else cat("[CRSP already loaded]")
+    
+    ep0 <- c(which(diff(crsp$PERMNO) != 0), length(crsp$PERMNO)) # distinguish different PERMNO
+    ep1 <- c(which(diff(crsp$YEAR) != 0), length(crsp$YEAR)) # distinguish the end of a year
+    ep1 <- sort(unique(c(ep0, ep1)))
+    if(length(ep1) == 1) {ep1 <- c(which(diff(crsp$PERMNO) != 0), length(crsp$PERMNO))} # deal with the case that data within only one year
+    
+    # calculate trading days each year
+    existDay <- c(ep1[1], diff(ep1))
+    crsp$TradeDays[ep1] <- existDay
+    
+    # detect NA in RET and assign 0 as the missing data
+    r <- as.numeric(crsp$RET)
+    r[which(is.na(r))] <- 0
+    crsp$RET <- r
+    
+    ret <- period.apply(crsp$RET+1, INDEX=ep1, FUN=prod)-1
+    vwr <- period.apply(crsp$vwretd+1, INDEX=ep1, FUN=prod)-1
+    crsp$AnnualRet[ep1] <- ret
+    crsp$SP500Ret[ep1] <- vwr
+    
+    #crspsubset <- crsp[which(!is.na(crsp$AnnualRet)), ]
+    crspsubset <- crsp[ep1, ]
+    crspsubset <- subset(crspsubset, TRUE, select = c(PERMNO, date, TICKER, CUSIP, MKTCAP, YEAR, TradeDays, AnnualRet, SP500Ret))
+    
+	# Function for search specific stock
+    searchStock <- function(search = "MSFT") { #x can be Ticker(character form), PERMNO(numeric form)
+        if(is.character(search)) {
+            stock <- crspsubset[crspsubset$TICKER==search, ]
+            if(nrow(stock) == 0) {cat("Cannot find stock with Ticker= ", search, ".")}
+            else {
+                search <- stock$PERMNO[1]
+                stock <- crspsubset[crspsubset$PERMNO==search, ]
+                print(stock)
+                summary(subset(stock, TRUE, select = c(MKTCAP, AnnualRet, SP500Ret)))
+                plot(x=stock$YEAR, y=stock$AnnualRet, 
+                     main=stock$TICKER[1], xlab="date", 
+                     ylab="Annual Return", type="l", col="blue",
+                     ylim=c(min(stock$AnnualRet, stock$SP500Ret), max(stock$AnnualRet, stock$SP500Ret))
+                )
+                points(x=stock$YEAR, y=stock$SP500Ret, type="l", col="red")
+                legend("bottomright", c(stock$TICKER[1], "vwretd"), col=c("blue", "red"), lwd=2.5, cex=0.8)
+                geometricMean <- (prod(stock$AnnualRet+1))^(1/length(stock$AnnualRet))-1
+                arithmeticMean <- mean(stock$AnnualRet)
+                returnResult <- c(geometricMean, arithmeticMean)
+                names(returnResult) <- c("(Geometric Mean of Return)", "(Arithmetic Mean of Return)")
+                print(returnResult)
+            }
+        }
+        else {
+            if(is.numeric(search)) {
+                stock <- crspsubset[as.numeric(crspsubset$PERMNO)==search, ]
+                if(nrow(stock) == 0) {cat("Cannot find stock with PERMNO= ", search, ".")}
+                else {
+                    print(stock)
+                    summary(subset(stock, TRUE, select = c(MKTCAP, AnnualRet, SP500Ret)))
+                    plot(x=stock$YEAR, y=stock$AnnualRet, 
+                         main=stock$TICKER[1], xlab="date", 
+                         ylab="Annual Return", type="l", col="blue",
+                         ylim=c(min(stock$AnnualRet, stock$SP500Ret), max(stock$AnnualRet, stock$SP500Ret))
+                    )
+                    points(x=stock$YEAR, y=stock$SP500Ret, type="l", col="red")
+                    legend("bottomright", c(stock$TICKER[1], "vwretd"), col=c("blue", "red"), lwd=2.5, cex=0.8)
+                    geometricMean <- (prod(stock$AnnualRet+1))^(1/length(stock$AnnualRet))-1
+                    arithmeticMean <- mean(stock$AnnualRet)
+                    returnResult <- c(geometricMean, arithmeticMean)
+                    names(returnResult) <- c("(Geometric Mean of Return", "Arithmetic Mean of Return)")
+                    print(returnResult)
+                }
+            }
+        }
+    } 
+    
+    demoResult <- function() {
+        print(crspsubset)
+        summary(subset(crspsubset, TRUE, select = c(MKTCAP, AnnualRet, SP500Ret)))
+    }
+
+    </pre>
+
+    <h2> References </h2>
+
+    <ul>
+      <li> <a href="https://wrds-web.wharton.upenn.edu/wrds/ds/crsp/stock_a/dsf.cfm?navId=128">Daily Stock-Wharton Research Data Services </a> </li>
+    </ul>
+	<ul>
+      <li> <a href="https://www.investopedia.com/ask/answers/04/040704.asp">Investopedia</a> </li>
+    </ul>
+
+
+  </body>
+
+</html>

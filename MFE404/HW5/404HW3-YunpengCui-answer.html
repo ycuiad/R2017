@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <title>MFE404 HW3 Yunpeng Cui</title>
+  </head>
+
+  <meta name="KEYWORDS" content="MFE404 HW3" />
+  <meta name="AUTHOR" content="Yunpeng Cui" />
+
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="hw.css" />
+
+
+  <body>
+
+    <h1>MFE404 Homework 3<br>Yunpeng Cui</h1>
+    <p>Jan 31, 2018</p>
+    <hr>
+
+    <h2>Executive Summary</h2>
+    <p>
+      In this Homework, I calculated the annual rates of return and market capitalization of stocks from 2010 to 2016, I attach a few rows of the data file as a sample and a link to the full csv file.
+    </p>
+    <hr>
+    <h2>Data Source</h2>
+    <p>Datas are downloaded from the WRDS/CRSP/Annual Update/Stock/Security Files/CRSP Daily Stock. I used the date range
+      from 2010-1-1 to 2016-12-31, selected PERMNO(Permenant Numbers for companies), Holding Period Return, Price, Cusip, Ticker,
+      Number of Shares Outstanding as the query variables.
+    </p>
+    <hr>
+    <h2>Data Analysis</h2>
+    <p>
+      Step 1: Convert the data into correct format (date, number) and get the year of each date
+      <br><br>
+      Step 2: Get the list of PERMNO and sort data into different sub data tables
+      <br><br>
+      Step 3: Get the list of existing years of each company, calculate the compounded rate of return of each year and the market capitalization. I used the begining of each year as <thead>
+        time to calculate the market cap.
+      <br><br>
+      Step 4: Export the data table as a csv file.
+      <br><br>
+      More details can be found in the codes.
+    </p>
+    <hr>
+    <h2>Data File</h2>
+    <figure>
+      <a href="https://raw.githubusercontent.com/ycuiad/R2017/master/MFE404/SampleAnnualData.jpg">
+        <img src="https://raw.githubusercontent.com/ycuiad/R2017/master/MFE404/SampleAnnualData.jpg" alt="Sample Annual Data" title="Sample Annual Data" width="500px"/>
+      </a>
+    </figure>
+
+    <a href="https://raw.githubusercontent.com/ycuiad/R2017/master/MFE404/Annual_Data.csv">Full Data</a>
+    <p>Note: There will be negative numbers in market cap, its is due to the "negative" price, which represents the price is got by taking the average of bid and ask price instead of closing price. I kept the negative sign with it and the market cap to keep this notice.</p>
+    <p>Besides, the data length can be extended to longer time horizen using the same code, because I used daily data, I only selected 2010 to 2016 for computational simplicity.</p>
+    <details>
+      <summary  style="font-size:140%"><strong>Computer Code</strong></summary>
+      <pre>
+        library(data.table)
+        library(lubridate)
+        library("dplyr")
+
+        #read data
+        setwd('C:/Users/Yunpeng/Desktop')
+        dt <- fread("dailyHPR.csv",header=T)
+        dt$date <- ymd(dt$date)
+        dt$year <- year(dt$date)
+        dt$RET <- as.numeric(dt$RET)
+
+        #get list of PERMNO
+        permno_table <- table(dt$PERMNO)
+        permno_list <- as.numeric(names(permno_table))
+
+        #set annual data table
+        dt_annual<- distinct(dt,PERMNO,year,.keep_all = TRUE)
+
+
+        #main
+        for (i in permno_list){
+          #get the sub df
+          dt_sub <- dt[dt$PERMNO==i]
+          #get list of year
+          year_table <- table(dt_sub$year)
+          year_list <- as.numeric(names(year_table))
+
+          #calculate rate of return for each year
+          for (j in year_list){
+            r <- prod(1+dt_sub[dt_sub$year==j]$RET)-1
+            dt_annual[dt_annual$PERMNO==i & dt_annual$year==j]$RET <- r
+          }
+        }
+
+        dt_annual <- na.omit(dt_annual)
+
+        #calculate market cap
+        dt_annual$mcap <- dt_annual$PRC*dt_annual$SHROUT
+        export_data <- dt_annual[,-c(2,5,7)]
+        export_data <- export_data[,c(1,2,3,5,4,6)]
+
+        #export as csv
+        write.csv(export_data, file = "Annual_Data.csv")
+
+      </pre>
+    </details>
+
+  </body>
+  <hr>
+  <footer>
+    <contact>(310)254-4797<br>yunpeng.cui.2018@anderson.ucla.edu</contact>
+  </footer>
+</html>

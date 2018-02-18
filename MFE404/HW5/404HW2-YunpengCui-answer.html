@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+  <head>
+    <title>MFE404 HW2 Yunpeng Cui</title>
+  </head>
+
+  <meta name="KEYWORDS" content="MFE404 HW2" />
+  <meta name="AUTHOR" content="Yunpeng Cui" />
+
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="hw.css" />
+
+
+  <body>
+
+    <h1>MFE404 Homework 2<br>Yunpeng Cui</h1>
+    <p>Jan 26, 2018</p>
+    <hr>
+
+    <h2>Executive Summary</h2>
+    <p>
+      In this Homework, I analyzed the excess rates of return of stocks from -20 days through +20 days at the ex-dates of dividends.
+      I calculated the mean of each day's excess rates of returns using the full data from CRSP and ploted them in a graph, which is shown below.
+    <br><br>
+      The numbers are also shown in the table below, briefly speaking:
+    <strong>
+      The excess rates of return are around 0 and mostly fluctuate from -5bps to 5bps, the worst dates are 1 to 3 days after the ex-date.
+    </strong>
+    </p>
+    <hr>
+    <h2>Data Source</h2>
+    <p>Datas are downloaded from the WRDS/CRSP/Annual Update/Stock/Security Files/CRSP Daily Stock. I used the date range
+      from 2010-1-1 to 2016-12-31, selected PERMNO(Permenant Numbers for companies), Holding Period Return, Record Date and Return on S&P Composite Index
+      as the query variable.
+    </p>
+    <hr>
+    <h2>Data Analysis</h2>
+    <p>
+      Step 1: There are values "B" and "C" in original data, replace them to be NA for the ease of data manipulation.
+      <br><br>
+      Step 2: There are cases when a company has multiple entries of the same recording date, leave only one of them because they will not contribute to our analysis.
+      <br><br>
+      Step 3: Seperate data for different companies and check whether the events have more than 41 days of data available, notice that since the data range is from 2010 to 2016, events happened in the first 20 days
+      of 2010 will not meet this criteria and will be removed. Also need to check whether there is data of S&P 500 returns in these dates.
+      <br><br>
+      Step 4: Get the excess rates of returns of these 41 days and calculate the their means, plot it in a graph. I used type="line"
+      so that it is easier to identify the date of highest and lowest excess rates of return.
+      <br><br>
+      More details can be found in the codes.
+    </p>
+    <hr>
+    <h2>Tables and Figures</h2>
+    <figure>
+      <a href="https://raw.githubusercontent.com/ycuiad/R2017/master/MFE404/div_r.png">
+        <img src="https://raw.githubusercontent.com/ycuiad/R2017/master/MFE404/div_r.png" alt="Graph of the excess rates of returns" title="Graph of the excess rates of returns" width="500px"/>
+      </a>
+    </figure>
+    <details>
+      <summary  style="font-size:140%"><strong>Computer Code</strong></summary>
+      <pre>
+        library("dplyr")
+
+        #load data
+        setwd('C:/Users/Yunpeng/Desktop')
+        df <- read.csv("div.csv", header = TRUE, sep = ",",stringsAsFactors = FALSE)
+
+        #remove duplicated dividend
+        df2<- distinct(df,PERMNO,date,.keep_all = TRUE)
+        df2$RET <- as.numeric(df2$RET)
+
+        #calculate number of events
+        eventno <- nrow(na.omit(df2))
+
+        #date_return means
+        mean_r <- rep(0,41)
+        count <- 0
+
+        #table of PERMNO
+        tab <- table(df2[,1])
+        permno_list <- as.numeric(names(tab))
+
+        #main
+        for (i in permno_list){
+          #get the sub df
+          sub_df <- df2[df2$PERMNO==i,]
+          #check whether sub df has enough data (>41), drop if not
+          if (nrow(sub_df)>=41){
+            #find the ex-dividend date
+            for(j in 21:(nrow(sub_df)-20)){
+              #check the date is ex-dividend date
+              if(!is.na(sub_df[j,3])){
+                #check if the 41 periods have full data
+                if(sum(is.na(sub_df[((j-21):(j+20)),4]))==0 && sum(is.na(sub_df[((j-21):(j+20)),5]))==0){
+                  #move count to the next event
+                  count <- count+1
+                  #get the return for 41 days
+                  for (k in -20:20){
+                    mean_r[k+21] <- mean_r[k+21]*(count-1)/count+(sub_df[j+k,4]-sub_df[j+k,5])/count
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        #plot the graph
+        plot(-20:20,mean_r*100,type = "l",xlab = "Relative Day",ylab = "Mean Return(%)")
+
+      </pre>
+    </details>
+
+  </body>
+  <hr>
+  <footer>
+    <contact>(310)254-4797<br>yunpeng.cui.2018@anderson.ucla.edu</contact>
+  </footer>
+</html>
